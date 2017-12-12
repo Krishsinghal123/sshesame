@@ -34,8 +34,28 @@ func (payload tcpip) String() string {
 		net.JoinHostPort(payload.DestinationAddress, strconv.Itoa(int(payload.DestinationPort))))
 }
 
-func Handle(remoteAddr net.Addr, newChannel ssh.NewChannel) {
+func Handle(remoteAddr net.Addr, newChannel ssh.NewChannel , sshmap map[string]string) {
 	var payload interface{} = newChannel.ExtraData()
+	motd := `Linux toker 2.6.31-22-generic-pae #69-Ubuntu SMP Wed Nov 24 09:04:58 UTC 2010 i686
+
+To access official Ubuntu documentation, please visit:
+http://help.ubuntu.com/
+
+  System information as of Tue Jan 25 19:25:53 CET 2011
+
+  System load:  0.23                Processes:           139
+  Usage of /:   76.8% of 911.20GB   Users logged in:     1
+  Memory usage: 17%                 IP address for eth0: 192.168.1.102
+  Swap usage:   0%
+
+  Graph this data and manage this system at https://landscape.canonical.com/
+
+38 packages can be updated.
+38 updates are security updates.
+
+No mail.
+Last login: Tue Jan 25 19:22:06 2011 from 192.168.1.106
+`
 	switch newChannel.ChannelType() {
 	case "x11":
 		parsedPayload := x11{}
@@ -71,8 +91,10 @@ func Handle(remoteAddr net.Addr, newChannel ssh.NewChannel) {
 	defer channel.Close()
 	go request.Handle(remoteAddr, newChannel.ChannelType(), channelRequests)
 	if newChannel.ChannelType() == "session" {
-		terminal := terminal.NewTerminal(channel, "$ ")
+		terminal := terminal.NewTerminal(channel, sshmap[remoteAddr.String()]+"@moneyserver:/$ ")
+		terminal.Write([]byte(motd))
 		for {
+			fmt.Println(sshmap[remoteAddr.String()])
 			line, err := terminal.ReadLine()
 			if err != nil {
 				if err == io.EOF {
